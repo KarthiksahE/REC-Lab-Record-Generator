@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lab_record_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/workspace
+      # Prevent overriding installed packages in container
+      - /workspace/app/__pycache__
+    env_file:
+      - ./backend/.env
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lab_record_frontend
+    ports:
+      - "5173:80" # Maps local port 5173 to nginx's internal port 80
+    depends_on:
+      - backend
+    restart: always

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+venv/
+.venv/
+backend/venv/
+backend/.venv/
+
+# Secrets & Environment Configurations
+.env
+.env*.local
+*.env
+backend/.env
+frontend/.env
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local Generated files / Upload paths
+backend/generated/
+backend/uploads/
+backend/storage/
+
+# Build outputs
+dist/
+frontend/dist/
+build/
+
+# IDEs & System Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+
+*.log
