@@ -35,7 +35,7 @@ Rec Lab Record Generator/
 │   ├── Dockerfile                 # Backend container definition
 │   ├── requirements.txt           # Python packages list
 │   ├── schema.sql                 # Supabase PostgreSQL tables script
-│   └── test_generation.py         # Offline test runner
+│  
 │
 ├── frontend/                      # Vite + React + Tailwind Frontend
 │   ├── src/
