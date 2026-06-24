@@ -15,7 +15,7 @@ security_scheme = HTTPBearer()
 class FirebaseAuthService:
     def __init__(self):
         self.project_id = settings.FIREBASE_PROJECT_ID
-        self.certs_url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken-system@system.gserviceaccount.com"
+        self.certs_url = "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
         self.certs_cache: Dict[str, str] = {}
         self.certs_expire_time: float = 0.0
 
