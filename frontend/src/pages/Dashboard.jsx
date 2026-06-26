@@ -964,7 +964,9 @@ const Dashboard = () => {
               )}
             </div>
             
-            <div className="flex-1 w-full rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800/50 overflow-hidden relative flex items-center justify-center">
+            <div className={`flex-1 w-full rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800/50 overflow-hidden relative ${
+              !previewBlobUrl || isPreviewLoading ? "flex items-center justify-center" : ""
+            }`}>
               {isPreviewLoading ? (
                 <div className="flex flex-col items-center gap-2">
                   <Loader2 className="animate-spin text-primary-500" size={30} />

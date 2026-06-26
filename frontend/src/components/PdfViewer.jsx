@@ -5,6 +5,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 const PdfPage = ({ pdf, pageNum, containerWidth }) => {
   const canvasRef = useRef(null);
   const [loading, setLoading] = useState(true);
+  const [renderError, setRenderError] = useState(null);  
   const renderTaskRef = useRef(null);
 
   useEffect(() => {
@@ -13,6 +14,8 @@ const PdfPage = ({ pdf, pageNum, containerWidth }) => {
     const renderPage = async () => {
       try {
         setLoading(true);
+        setRenderError(null);
+
         const page = await pdf.getPage(pageNum);
         if (!active) return;
 
@@ -28,8 +31,9 @@ const PdfPage = ({ pdf, pageNum, containerWidth }) => {
         const viewport = page.getViewport({ scale: 1.0 });
 
         // Calculate target display width (fit to parent container minus padding)
-        const padding = 16; // 8px left & right
-        const targetWidth = Math.max(150, containerWidth - padding);
+        // Fall back to 350px if containerWidth is 0 (prevents initial rendering block)
+        const padding = 16; 
+        const targetWidth = Math.max(150, (containerWidth || 350) - padding);
         
         // Scale factor relative to native viewport
         const displayScale = targetWidth / viewport.width;
@@ -61,13 +65,15 @@ const PdfPage = ({ pdf, pageNum, containerWidth }) => {
       } catch (err) {
         if (err.name !== "RenderingCancelledException") {
           console.error(`Error rendering page ${pageNum}:`, err);
+          if (active) {
+            setRenderError(err.message || "Failed to render page.");
+            setLoading(false);
+          }
         }
       }
     };
 
-    if (containerWidth > 0) {
       renderPage();
-    }
 
     return () => {
       active = false;
@@ -84,7 +90,14 @@ const PdfPage = ({ pdf, pageNum, containerWidth }) => {
           <Loader2 className="animate-spin text-primary-500" size={20} />
         </div>
       )}
+      {renderError ? (
+        <div className="flex flex-col items-center justify-center p-6 text-center gap-1.5 text-red-500 w-[300px] h-[150px] bg-slate-50 dark:bg-slate-900">
+          <AlertCircle size={20} />
+          <span className="text-[10px] font-extrabold uppercase">Page Render Error</span>
+        </div>
+      ) : (
       <canvas ref={canvasRef} className="block shadow-inner" />
+      )}
     </div>
   );
 };
@@ -110,7 +123,6 @@ const PdfViewer = ({ url }) => {
     updateWidth();
 
     const resizeObserver = new ResizeObserver(() => {
-      // Use requestAnimationFrame to prevent debounce loop errors
       window.requestAnimationFrame(() => {
         updateWidth();
       });
@@ -146,8 +158,16 @@ const PdfViewer = ({ url }) => {
         }
 
         const pdfjsLib = window.pdfjsLib;
-        // Configure PDF.js worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+        // Bypass CORS Same-Origin Policy for cross-origin Worker using inline Blob importScripts
+        const workerUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        try {
+          const blob = new Blob([`importScripts("${workerUrl}");`], { type: "application/javascript" });
+          pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+        } catch (workerErr) {
+          console.warn("Worker Blob wrapper creation failed. Falling back to direct URL.", workerErr);
+          pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+        }
 
         const loadingTask = pdfjsLib.getDocument(url);
         const loadedPdf = await loadingTask.promise;
@@ -175,7 +195,7 @@ const PdfViewer = ({ url }) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 w-full h-full gap-2 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-950">
+      <div className="flex flex-col items-center justify-center p-8 w-full h-full gap-2 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 min-h-[300px]">
         <Loader2 className="animate-spin text-primary-500" size={28} />
         <span className="text-xs font-semibold">Compiling inline preview...</span>
       </div>
@@ -184,7 +204,7 @@ const PdfViewer = ({ url }) => {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 text-center gap-2 text-red-500 bg-slate-100 dark:bg-slate-955 w-full h-full">
+      <div className="flex flex-col items-center justify-center p-6 text-center gap-2 text-red-500 bg-slate-100 dark:bg-slate-955 w-full h-full min-h-[300px]">
         <AlertCircle size={24} />
         <span className="text-xs font-extrabold uppercase tracking-wider">Preview Failed</span>
         <p className="text-xs max-w-[240px] text-slate-500 dark:text-slate-400">{error}</p>
@@ -195,7 +215,7 @@ const PdfViewer = ({ url }) => {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-y-auto px-2 py-4 bg-slate-100 dark:bg-slate-950 flex flex-col items-center gap-4 scroll-smooth"
+      className="w-full h-full overflow-y-auto px-2 py-4 bg-slate-100 dark:bg-slate-955 flex flex-col items-center gap-4 scroll-smooth"
     >
       {Array.from({ length: numPages }, (_, i) => (
         <PdfPage

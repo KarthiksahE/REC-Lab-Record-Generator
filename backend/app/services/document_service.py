@@ -80,8 +80,8 @@ class DocumentService:
             # 5. Render general placeholders using docxtpl
             doc.render(context)
             
-            # Use native template borders and section layouts directly (no overrides)
-            # self._add_page_borders(doc)
+            # Fix page borders compatibility for LibreOffice conversion
+            self._add_page_borders(doc)
             
             # Save the generated docx file
             doc.save(docx_out_path)
@@ -228,29 +228,23 @@ class DocumentService:
 
     def _add_page_borders(self, doc):
         """
-        Adds page borders to all sections of the document.
+        Fixes page borders compatibility with LibreOffice PDF conversion by ensuring
+        existing borders are offset from 'page'.
         """
         for section in doc.sections:
             sectPr = section._sectPr
-            # Check if pgBorders already exists
             pgBorders = sectPr.find(qn('w:pgBorders'))
             if pgBorders is not None:
-                sectPr.remove(pgBorders)
+                # Setting offsetFrom to 'page' ensures LibreOffice renders the border in PDFs
+                pgBorders.set(qn('w:offsetFrom'), 'page')
                 
-            pgBorders = OxmlElement('w:pgBorders')
-            pgBorders.set(qn('w:offsetFrom'), 'page')             
-            
-            
-            # Configure borders for top, left, bottom, right
+            # Ensure the individual page borders have spacing so they don't overlap text
             for border_name in ['top', 'left', 'bottom', 'right']:
-                border = OxmlElement(f'w:{border_name}')
-                border.set(qn('w:val'), 'single')
-                border.set(qn('w:sz'), '12') # size of border (12 = 1.5 pt)
-                border.set(qn('w:space'), '24') # margin/padding in points
-                border.set(qn('w:color'), 'auto')
-                pgBorders.append(border)
-                
-            sectPr.append(pgBorders)
+                border = pgBorders.find(qn(f'w:{border_name}'))
+                if border is not None:
+                    # Set default spacing margin (24pt) if not present
+                    if not border.get(qn('w:space')):
+                        border.set(qn('w:space'), '24')
 
     def clean_up_files(self, paths_dict: Dict[str, Any]):
         """

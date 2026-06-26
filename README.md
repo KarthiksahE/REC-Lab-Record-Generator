@@ -6,6 +6,20 @@ The application strictly preserves the styling, fonts, margins, headers, and foo
 
 ---
 
+## Key Technical Features
+
+### 1. High-Fidelity Responsive Inline PDF Preview (Vite + React)
+- **Dynamic CDN Load**: Loaded fully on-demand from a CDN, avoiding large node packages or complex bundling steps.
+- **Canvas-based Rendering**: Uses **PDF.js** to parse and render pages vertically in a custom scrollable viewport instead of standard `<iframe>` or `<object>` elements. This completely prevents empty/broken frames and download fallback popups in mobile browsers (like Chrome on Android or Safari on iOS).
+- **High-DPI Scaling (Retina)**: Measures the parent element size using a `ResizeObserver` and scales the canvas rendering resolution dynamically (e.g., 2x target scale) to maintain razor-sharp font rendering and border edges on high-resolution displays.
+- **Worker CORS Workaround**: Bypasses browser Same-Origin Policy (CORS) blocks on web workers by dynamically wrapping the cross-origin CDN worker script inside a local browser Blob URL using `importScripts`.
+
+### 2. LibreOffice PDF Page Border Compatibility (FastAPI Backend)
+- **Border Preservation**: Inspected Word templates often feature cover page borders (`w:pgBorders`) that LibreOffice headless parser omits by default during DOCX-to-PDF conversion on Linux/Render.
+- **Offset Compatibility Fix**: The backend detects existing page borders in the template and programmatically forces their alignment style attribute to `offsetFrom="page"`. This ensures LibreOffice correctly draws first-page/cover-page borders in the output PDF without affecting margins, text padding, or layout alignments.
+
+---
+
 ## Folder Structure
 
 ```text
@@ -41,6 +55,7 @@ Rec Lab Record Generator/
 │   ├── src/
 │   │   ├── assets/
 │   │   ├── components/
+|   |   |   └── PdfViewer.jsx
 │   │   ├── contexts/              # global React context (Auth)
 │   │   │   └── AuthContext.jsx
 │   │   ├── pages/                 # Routing pages
