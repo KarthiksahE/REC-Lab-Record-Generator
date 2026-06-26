@@ -26,6 +26,7 @@ import {
   Calendar,
   Link as LinkIcon
 } from "lucide-react";
+import PdfViewer from "../components/PdfViewer";
 
 const extractStudentMeta = (userOrName) => {
   if (!userOrName) return { name: "", reg: "" };
@@ -101,16 +102,6 @@ const Dashboard = () => {
   const [notification, setNotification] = useState(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState("form"); // 'form' or 'records' (for mobile responsive layouts)
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
 
   const dropdownRef = useRef(null);
 
@@ -980,14 +971,7 @@ const Dashboard = () => {
                   <span className="text-xs font-semibold text-slate-500">Compiling document PDF...</span>
                 </div>
               ) : previewBlobUrl ? (
-                
-                <iframe
-                  src={`${previewBlobUrl}#toolbar=0&navpanes=0`}
-                  title="PDF Preview"
-                  className="w-full h-full"
-                  style={{ border: "none" }}
-                />
-              
+                <PdfViewer url={previewBlobUrl} />
               ) : (
                 <div className="flex flex-col items-center p-6 text-center gap-2 text-slate-400 dark:text-slate-600">
                   <Eye size={40} className="stroke-[1.5]" />
