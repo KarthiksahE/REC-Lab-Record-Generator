@@ -5,12 +5,17 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV LIBREOFFICE_PATH=/usr/bin/soffice
 
-# Install LibreOffice headless and basic system dependencies
+# Install LibreOffice headless, system fonts, and metrically-compatible MS Office fonts
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libreoffice-writer \
     libreoffice-java-common \
+    fonts-liberation \
+    fonts-crosextra-carlito \
+    fonts-crosextra-caladea \
+    fontconfig \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+RUN fc-cache -f -v
 
 WORKDIR /workspace
 
