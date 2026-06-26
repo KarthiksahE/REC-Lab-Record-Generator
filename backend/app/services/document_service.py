@@ -227,24 +227,25 @@ class DocumentService:
             target_table._tbl.remove(row._tr)
 
     def _add_page_borders(self, doc):
-        """
-        Fixes page borders compatibility with LibreOffice PDF conversion by ensuring
-        existing borders are offset from 'page'.
-        """
+        # Section 0 (cover page) type is continuous in some templates.
+        # Continuous sections prevent page borders from rendering in LibreOffice PDF conversion.
+        if len(doc.sections) > 0:
+            first_sectPr = doc.sections[0]._sectPr
+            sectType = first_sectPr.find(qn('w:type'))
+            if sectType is not None and sectType.get(qn('w:val')) == 'continuous':
+                first_sectPr.remove(sectType)
+
         for section in doc.sections:
             sectPr = section._sectPr
             pgBorders = sectPr.find(qn('w:pgBorders'))
             if pgBorders is not None:
-                # Setting offsetFrom to 'page' ensures LibreOffice renders the border in PDFs
                 pgBorders.set(qn('w:offsetFrom'), 'page')
-                
-            # Ensure the individual page borders have spacing so they don't overlap text
-            for border_name in ['top', 'left', 'bottom', 'right']:
-                border = pgBorders.find(qn(f'w:{border_name}'))
-                if border is not None:
-                    # Set default spacing margin (24pt) if not present
-                    if not border.get(qn('w:space')):
-                        border.set(qn('w:space'), '24')
+                for border_name in ['top', 'left', 'bottom', 'right']:
+                    border = pgBorders.find(qn(f'w:{border_name}'))
+                    if border is not None:
+                        border.set(qn('w:color'), '000000') # Fix LibreOffice auto-color bug
+                        border.set(qn('w:sz'), '12')       # Size 1.5 pt
+                        border.set(qn('w:space'), '24')    # Standard spacing margin
 
     def clean_up_files(self, paths_dict: Dict[str, Any]):
         """
