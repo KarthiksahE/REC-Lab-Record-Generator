@@ -101,6 +101,16 @@ const Dashboard = () => {
   const [notification, setNotification] = useState(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState("form"); // 'form' or 'records' (for mobile responsive layouts)
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768 || /Mobi|Android|iPhone/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const dropdownRef = useRef(null);
 
@@ -970,12 +980,33 @@ const Dashboard = () => {
                   <span className="text-xs font-semibold text-slate-500">Compiling document PDF...</span>
                 </div>
               ) : previewBlobUrl ? (
+                isMobile ? (
+                  <div className="flex flex-col items-center justify-center p-6 text-center gap-4">
+                    <div className="p-3 rounded-2xl bg-red-500/10 text-red-500 flex items-center justify-center shadow-sm">
+                      <FileText size={36} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200">PDF Preview Ready</p>
+                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1.5 max-w-[240px] leading-relaxed">
+                        Mobile browsers cannot display PDF previews inline. Click below to view the full document in a new tab.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.open(previewBlobUrl, "_blank")}
+                      className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md shadow-primary-500/20 active:scale-95 transition"
+                    >
+                      <Eye size={15} /> Open Preview PDF
+                    </button>
+                  </div>
+              ) : (
                 <iframe
                   src={`${previewBlobUrl}#toolbar=0&navpanes=0`}
                   title="PDF Preview"
                   className="w-full h-full"
                   style={{ border: "none" }}
                 />
+              )
               ) : (
                 <div className="flex flex-col items-center p-6 text-center gap-2 text-slate-400 dark:text-slate-600">
                   <Eye size={40} className="stroke-[1.5]" />

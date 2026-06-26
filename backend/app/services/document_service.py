@@ -80,8 +80,8 @@ class DocumentService:
             # 5. Render general placeholders using docxtpl
             doc.render(context)
             
-            # Add page borders to all sections
-            #self._add_page_borders(doc)
+            # Use native template borders and section layouts directly (no overrides)
+            # self._add_page_borders(doc)
             
             # Save the generated docx file
             doc.save(docx_out_path)
@@ -165,9 +165,9 @@ class DocumentService:
                 from docx.table import _Row
                 new_row = _Row(new_tr, target_table)
                 
-                # Helper to write to cell while preserving styling and applying alignments
-                def format_and_write_cell(cell, text, align, bold=False):
-                    cell.vertical_alignment = 1 # Center vertically (1 = Center)
+                # Helper to write to cell while preserving template styling and alignments
+                def format_and_write_cell(cell, text):
+                    cell.vertical_alignment = 1 # Center vertically
                     
                     # Clear extra paragraphs
                     while len(cell.paragraphs) > 1:
@@ -175,28 +175,24 @@ class DocumentService:
                         p_element.getparent().remove(p_element)
                         
                     p = cell.paragraphs[0]
-                    p.text = ""
-                    p.alignment = align # 0 = Left, 1 = Center
-                    p.paragraph_format.space_before = Pt(6)
-                    p.paragraph_format.space_after = Pt(6)
-                    p.paragraph_format.line_spacing = 1.15
-                    
-                    run = p.add_run(text)
-                    run.font.name = 'Times New Roman'
-                    run.font.size = Pt(11)
-                    run.bold = bold
-                    return run
+                    if p.runs:
+                        p.runs[0].text = text
+                        # Clear text from any other runs inside this paragraph
+                        for r in p.runs[1:]:
+                            r.text = ""
+                    else:
+                        p.text = text
                 
                 # 2. Fill the cell values
                 # Cell 0: S.No (or Exp No)
-                format_and_write_cell(new_row.cells[0], str(s_no_idx), align=1)
+                format_and_write_cell(new_row.cells[0], str(s_no_idx))
                 
                 # Cell 1: Date
                 date_val = exp.get("date", "")
-                format_and_write_cell(new_row.cells[1], date_val if date_val else "", align=1)
+                format_and_write_cell(new_row.cells[1], date_val if date_val else "")
                 
                 # Cell 2: Experiment Title
-                format_and_write_cell(new_row.cells[2], exp.get("title", ""), align=0)
+                format_and_write_cell(new_row.cells[2], exp.get("title", ""))
                 
                 # Cell 3: QR Code (from GitHub link)
                 new_row.cells[3].vertical_alignment = 1 # Center vertically
@@ -210,24 +206,21 @@ class DocumentService:
                         generate_qr_code(github_url, qr_path)
                         temp_qr_paths.append(qr_path)
                         
-                        # Clear cell text and insert the image
-                        new_row.cells[3].text = ""
+                        # Clear cell text/runs and insert the image
                         p = new_row.cells[3].paragraphs[0]
-                        p.alignment = 1 # Center align
-                        p.paragraph_format.space_before = Pt(4)
-                        p.paragraph_format.space_after = Pt(4)
-                        
+                        for r in p.runs:
+                            r.text = ""
                         run = p.add_run()
                         # Add image and scale to fit inside cell without stretching
                         run.add_picture(qr_path, width=Inches(0.85))
                     except Exception as qr_err:
                         logger.error(f"Failed to insert QR code for row {s_no_idx}: {str(qr_err)}")
-                        format_and_write_cell(new_row.cells[3], "QR Error", align=1)
+                        format_and_write_cell(new_row.cells[3], "QR Error")
                 else:
-                    format_and_write_cell(new_row.cells[3], "", align=1)
+                    format_and_write_cell(new_row.cells[3], "")
                     
                 # Cell 4: Signature (Leave blank space)
-                format_and_write_cell(new_row.cells[4], "", align=1)
+                format_and_write_cell(new_row.cells[4], "")
 
         # Remove the original template rows
         for row in rows_to_remove:
@@ -246,7 +239,7 @@ class DocumentService:
                 
             pgBorders = OxmlElement('w:pgBorders')
             pgBorders.set(qn('w:offsetFrom'), 'page')             
-            pgBorders.set(qn('w:display'), 'allPages')  # Force border on all pages including the first page
+            
             
             # Configure borders for top, left, bottom, right
             for border_name in ['top', 'left', 'bottom', 'right']:
