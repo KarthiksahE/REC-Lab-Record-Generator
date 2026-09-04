@@ -27,7 +27,15 @@ const Login = () => {
       await login(email, password);
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message || "Failed to log in.");
+      const authMessages = {
+        "auth/invalid-credential": "Incorrect email or password.",
+        "auth/invalid-login-credentials": "Incorrect email or password.",
+        "auth/wrong-password": "Incorrect email or password.",
+        "auth/user-not-found": "Incorrect email or password.",
+        "auth/too-many-requests": "Too many failed attempts. Please try again later.",
+        "auth/invalid-email": "Please enter a valid email address."
+      };
+      setError(authMessages[err.code] || err.message || "Failed to log in.");
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +84,7 @@ const Login = () => {
           </motion.div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} noValidate className="space-y-5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Email Address
