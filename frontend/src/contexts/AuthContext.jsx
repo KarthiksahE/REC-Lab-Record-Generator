@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   const syncUserWithBackend = async (user) => {
     if (!user) return;
     try {
-      const token = await user.getIdTokenWrapper();
+      const token = await user.getIdToken();
       // Setup backend API URL
       const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
       await axios.post(
@@ -31,9 +31,11 @@ export const AuthProvider = ({ children }) => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
-      console.log("User successfully synced with backend PostgreSQL.");
+      console.log("User successfully synced with the backend database.");
     } catch (error) {
       console.error("Failed to sync user with backend:", error);
+      const detail = error.response?.data?.detail;
+      throw new Error(detail || "Could not sync your account with the server.");
     }
   };
 
@@ -41,9 +43,13 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = subscribeToAuthChanges(async (user) => {
       if (user) {
         setCurrentUser(user);
-        setLoading(false);
-        // Fire sync in background
-        await syncUserWithBackend(user);
+        try {
+          await syncUserWithBackend(user);
+        } catch (error) {
+          console.error("Initial account synchronization failed:", error);
+        } finally {
+          setLoading(false);
+        }
       } else {
         setCurrentUser(null);
         setLoading(false);

@@ -114,6 +114,8 @@ Create a `.env` file under the `frontend/` directory:
 | `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Authentication domain | `project.firebaseapp.com` |
 | `VITE_FIREBASE_PROJECT_ID` | Firebase Project ID | `project-id` |
 
+For Vercel, configure these variables in **Project Settings > Environment Variables** rather than relying on a local `.env` file. In particular, `VITE_API_URL` must be the public Render URL, for example `https://your-service.onrender.com` (without a trailing slash). Rebuild and redeploy after changing Vite variables because they are embedded into the frontend at build time.
+
 ---
 
 ## Installation Guide (Local Development)
@@ -125,6 +127,8 @@ Create a `.env` file under the `frontend/` directory:
 
 ### 2. Database Setup (Supabase)
 Run the SQL queries in `backend/schema.sql` inside the **SQL Editor** on your Supabase Dashboard to instantiate the tables (`users`, `documents`, `download_history`).
+
+Firebase is the authentication provider in this project. Firebase accounts appear in Firebase Console, not in Supabase Authentication. The backend copies each authenticated Firebase account into the Supabase `public.users` table when `/api/auth/sync` succeeds. To enable that copy on Render, set `SUPABASE_URL` to the complete project URL (such as `https://abc123.supabase.co`) and set `SUPABASE_SERVICE_ROLE_KEY` to the server-only service-role key. Never expose that key in Vercel or frontend code.
 
 ### 3. Backend Setup
 1. Open a terminal inside the `backend` folder:
@@ -158,7 +162,7 @@ All endpoints require authentication. Pass the JWT Token in headers: `Authorizat
 
 ### Authentication Sync
 * **`POST /api/auth/sync`**
-  Synchronizes authenticated user details. If the user doesn't exist in PostgreSQL, they are created.
+  Synchronizes authenticated Firebase user details into the public `users` table. Firebase remains the identity provider; this endpoint does not create a second user in Supabase Authentication.
 * **`GET /api/auth/profile`**
   Retrieves profile information of the current logged-in user.
 
@@ -216,3 +220,11 @@ To stop the containers:
 ```bash
 docker-compose down
 ```
+
+### Hosted deployment checklist
+
+**Render backend environment variables:** set `FIREBASE_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `ALLOWED_ORIGINS`. `ALLOWED_ORIGINS` must include the exact Vercel origin, such as `https://your-app.vercel.app`, alongside any local origins. Keep `DEBUG=False` in production.
+
+**Vercel frontend environment variables:** set all `VITE_FIREBASE_*` values from the Firebase web app and set `VITE_API_URL` to the Render HTTPS URL. In Firebase Authentication, enable Google sign-in and add the Vercel hostname to Authorized domains.
+
+After deploying, open the Render URL in a browser and confirm `/` returns `{"status":"healthy"}`. Then sign in and verify the new row under Supabase **Table Editor > public > users**. If sync fails, the API now returns the database error instead of reporting a false success.
