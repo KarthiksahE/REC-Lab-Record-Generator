@@ -43,3 +43,17 @@ CREATE TABLE IF NOT EXISTS download_history (
 CREATE INDEX IF NOT EXISTS idx_documents_user_id ON documents(user_id);
 CREATE INDEX IF NOT EXISTS idx_download_history_user_id ON download_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_documents_updated_at ON documents(updated_at DESC);
+
+-- Keep updated_at accurate when an existing record is edited.
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS documents_set_updated_at ON documents;
+CREATE TRIGGER documents_set_updated_at
+BEFORE UPDATE ON documents
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();

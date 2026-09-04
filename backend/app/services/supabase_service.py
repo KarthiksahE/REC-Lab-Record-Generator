@@ -10,9 +10,10 @@ class SupabaseService:
     def __init__(self):
         # Prefer service role key for backend administration to bypass RLS
         url = settings.SUPABASE_URL
-        key = settings.SUPABASE_SERVICE_ROLE_KEY or settings.SUPABASE_KEY
+        service_role_key = settings.SUPABASE_SERVICE_ROLE_KEY
+        key = service_role_key if self._is_real_credential(service_role_key) else settings.SUPABASE_KEY
         
-        if not url or url.endswith("supabase.co") or not key or key == "your-supabase-anon-key":
+        if not self._is_real_url(url) or not self._is_real_credential(key):
             logger.warning("Supabase URL or Key is not configured correctly. Service will operate in offline/mock mode.")
             self.client = None
         else:
@@ -22,6 +23,14 @@ class SupabaseService:
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase client: {str(e)}")
                 self.client = None
+
+    @staticmethod
+    def _is_real_url(url: Optional[str]) -> bool:
+        return bool(url and url.startswith("https://") and "your-supabase-project" not in url)
+
+    @staticmethod
+    def _is_real_credential(value: Optional[str]) -> bool:
+        return bool(value and not value.startswith("your-supabase-") and value not in {"your_api_key_here"})
 
     def is_configured(self) -> bool:
         return self.client is not None
@@ -36,23 +45,18 @@ class SupabaseService:
             return {"id": uid, "email": email, "display_name": display_name}
             
         try:
-            # Check if user already exists
-            response = self.client.table("users").select("*").eq("id", uid).execute()
-            if response.data:
-                return response.data[0]
-                
-            # If not, insert user
             new_user = {
                 "id": uid,
                 "email": email,
                 "display_name": display_name
             }
-            insert_resp = self.client.table("users").insert(new_user).execute()
-            return insert_resp.data[0] if insert_resp.data else new_user
+            response = self.client.table("users").upsert(new_user, on_conflict="id").execute()
+            if not response.data:
+                raise RuntimeError("Supabase returned no user record after sync")
+            return response.data[0]
         except Exception as e:
             logger.error(f"Database error syncing user {uid}: {str(e)}")
-            # Fail gracefully, return user details
-            return {"id": uid, "email": email, "display_name": display_name}
+            raise RuntimeError(f"Could not sync user to Supabase: {str(e)}") from e
 
     def save_document(self, user_id: str, doc_data: Dict[str, Any]) -> Dict[str, Any]:
         """
